@@ -22,6 +22,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 const registerSchema = z.object({
   name: z
     .string()
@@ -56,6 +57,9 @@ const SignUpForm = () => {
       {
         onSuccess: () => {
           router.push("/dashboard");
+        },
+        onError: (error) => {
+          toast.error("Erro ao criar conta.");
         },
       }
     );
