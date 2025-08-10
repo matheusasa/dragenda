@@ -10,7 +10,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 
-export const usersTable = pgTable("users", {
+export const usersTables = pgTable("users", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
@@ -26,7 +26,7 @@ export const usersTable = pgTable("users", {
     .notNull(),
 });
 
-export const usersTableRelations = relations(usersTable, ({ many }) => ({
+export const usersTableRelations = relations(usersTables, ({ many }) => ({
   usersToClinics: many(usersToClinicsTable),
 }));
 
@@ -42,7 +42,7 @@ export const clinicsTable = pgTable("clinics", {
 export const usersToClinicsTable = pgTable("users_to_clinics", {
   userId: text("user_id")
     .notNull()
-    .references(() => usersTable.id),
+    .references(() => usersTables.id),
   clinicId: uuid("clinic_id")
     .notNull()
     .references(() => clinicsTable.id),
@@ -55,9 +55,9 @@ export const usersToClinicsTable = pgTable("users_to_clinics", {
 export const usersToClinicsTableRelations = relations(
   usersToClinicsTable,
   ({ one }) => ({
-    user: one(usersTable, {
+    user: one(usersTables, {
       fields: [usersToClinicsTable.userId],
-      references: [usersTable.id],
+      references: [usersTables.id],
     }),
     clinic: one(clinicsTable, {
       fields: [usersToClinicsTable.clinicId],
@@ -168,7 +168,7 @@ export const appointmentsTableRelations = relations(
   })
 );
 
-export const sessionTable = pgTable("sessions", {
+export const sessionTables = pgTable("sessions", {
   id: text("id").primaryKey(),
   expiresAt: timestamp("expires_at").notNull(),
   token: text("token").notNull().unique(),
@@ -178,16 +178,16 @@ export const sessionTable = pgTable("sessions", {
   userAgent: text("user_agent"),
   userId: text("user_id")
     .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
+    .references(() => usersTables.id, { onDelete: "cascade" }),
 });
 
-export const accountTable = pgTable("accounts", {
+export const accountTables = pgTable("accounts", {
   id: text("id").primaryKey(),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
   userId: text("user_id")
     .notNull()
-    .references(() => usersTable.id, { onDelete: "cascade" }),
+    .references(() => usersTables.id, { onDelete: "cascade" }),
   accessToken: text("access_token"),
   refreshToken: text("refresh_token"),
   idToken: text("id_token"),
@@ -199,7 +199,7 @@ export const accountTable = pgTable("accounts", {
   updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const verificationTable = pgTable("verifications", {
+export const verificationTables = pgTable("verifications", {
   id: text("id").primaryKey(),
   identifier: text("identifier").notNull(),
   value: text("value").notNull(),
