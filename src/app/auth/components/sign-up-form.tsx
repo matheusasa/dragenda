@@ -16,11 +16,15 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
+import { Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Form } from "@/components/ui/form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 const registerSchema = z.object({
   name: z
     .string()
@@ -35,6 +39,7 @@ const registerSchema = z.object({
 });
 
 const SignUpForm = () => {
+  const router = useRouter();
   const formRegister = useForm<z.infer<typeof registerSchema>>({
     resolver: zodResolver(registerSchema),
     defaultValues: {
@@ -44,10 +49,24 @@ const SignUpForm = () => {
     },
   });
 
-  function onSubmitRegister(values: z.infer<typeof registerSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values);
+  async function onSubmitRegister(values: z.infer<typeof registerSchema>) {
+    await authClient.signUp.email(
+      {
+        email: values.email, // user email address
+        password: values.password, // user password -> min 8 characters by default
+        name: values.name, // user display name
+      },
+      {
+        onSuccess: () => {
+          router.push("/dashboard");
+        },
+        onError: (ctx) => {
+          if (ctx.error.code === "USER_ALREADY_EXISTS") {
+            toast.error("Email já cadastrado.");
+          }
+        },
+      }
+    );
   }
   return (
     <Card>
@@ -94,7 +113,7 @@ const SignUpForm = () => {
                 <FormItem>
                   <FormLabel>Senha</FormLabel>
                   <FormControl>
-                    <Input placeholder="Sua senha" {...field} />
+                    <Input placeholder="Sua senha" type="password" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -102,8 +121,16 @@ const SignUpForm = () => {
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full">
-              Registrar-se
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={formRegister.formState.isSubmitting}
+            >
+              {formRegister.formState.isSubmitting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Registrar-se"
+              )}
             </Button>
           </CardFooter>
         </form>
