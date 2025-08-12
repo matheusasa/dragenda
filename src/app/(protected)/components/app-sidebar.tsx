@@ -16,8 +16,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -29,10 +27,9 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 // Menu items.
 const items = [
@@ -60,6 +57,7 @@ const items = [
 
 export function AppSidebar() {
   const router = useRouter();
+  const session = authClient.useSession();
   const handleSignout = () => {
     authClient.signOut({
       fetchOptions: {
@@ -96,7 +94,17 @@ export function AppSidebar() {
       <SidebarFooter>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button>Clinica</Button>
+            <SidebarMenuButton size="lg">
+              <Avatar>
+                <AvatarFallback>M</AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="text-sm ">{session.data?.user.clinic.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  {session.data?.user.email}
+                </p>
+              </div>
+            </SidebarMenuButton>
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             <DropdownMenuItem onClick={handleSignout}>
