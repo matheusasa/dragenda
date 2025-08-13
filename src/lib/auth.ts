@@ -15,17 +15,15 @@ export const auth = betterAuth({
     customSession(async ({ user, session }) => {
       const clinics = await db.query.usersToClinicsTable.findMany({
         where: eq(schema.usersToClinicsTable.userId, user.id),
+        with: { clinic: true },
       });
       const clinic = clinics[0];
-      const clinicName = await db.query.clinicsTable
-        .findFirst({
-          where: eq(schema.clinicsTable.id, clinic?.clinicId),
-        })
-        .then((clinic) => clinic?.name || null);
       return {
         user: {
           ...user,
-          clinic: { id: clinic?.clinicId || null, name: clinicName },
+          clinic: clinic.clinicId
+            ? { id: clinic?.clinicId, name: clinic.clinic.name }
+            : undefined,
         },
         session,
       };
