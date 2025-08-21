@@ -31,12 +31,18 @@ const ClinicForm = () => {
 
   const onSubmitClinic = async (values: z.infer<typeof clinicSchema>) => {
     try {
+      console.log("Criando clínica com nome:", values.name);
       await createClinic(values.name);
+      toast.success("Clínica criada com sucesso!");
     } catch (error) {
       if (isRedirectError(error)) {
+        // Redirecionamento é esperado após sucesso
         return;
       }
-      toast.error("Erro ao criar clínica");
+      console.error("Erro ao criar clínica:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao criar clínica"
+      );
     }
   };
 

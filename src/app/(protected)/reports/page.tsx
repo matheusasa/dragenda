@@ -1,89 +1,86 @@
-import { eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
+
+import {
+  PageActions,
+  PageContainer,
+  PageContent,
+  PageDescription,
+  PageHeader,
+  PageHeaderContent,
+  PageTitle,
+} from "@/components/ui/page-container";
 import { db } from "@/db";
 import {
   appointmentsTable,
   patientReportsTable,
   patientsTable,
-  patientProfessionalLinksTable,
 } from "@/db/schema";
+import WithAuthentication from "@/hocs/with-authentication";
 import { auth } from "@/lib/auth";
-import { DataTable } from "@/components/ui/data-table";
-import AddPatientReportForm from "../appointments/_components/add-patient-report-form";
 
-// Colunas da tabela de relatórios
-const columns = [
-  {
-    accessorKey: "patient.name",
-    header: "Paciente",
-    cell: (row: any) => row.row.original.patient.name,
-  },
-  {
-    accessorKey: "appointment.date",
-    header: "Data da Consulta",
-    cell: (row: any) =>
-      new Date(row.row.original.appointment.date).toLocaleString("pt-BR"),
-  },
-  {
-    accessorKey: "title",
-    header: "Título do Relatório",
-  },
-  {
-    accessorKey: "actions",
-    header: "Ações",
-    cell: (row: any) => row.row.original.actions,
-  },
-];
+import AddReportButton from "./_components/add-report-button";
+import ReportsList from "./_components/reports-list";
 
 export default async function ReportsPage() {
   const session = await auth.api.getSession({ headers: await headers() });
-  //   if (!session || session.user.role !== "psicologo") {
-  //     redirect("/dashboard");
-  //   }
 
-  // Buscar vínculos do profissional logado
-  const links = await db.query.patientProfessionalLinksTable.findMany({
-    where: eq(patientProfessionalLinksTable.professionalId, session!.user.id),
-  });
-  const patientIds = links.map((link) => link.patientId);
+  // Se não há sessão, retornar array vazio (o WithAuthentication vai redirecionar)
+  if (!session?.user?.id) {
+    return (
+      <WithAuthentication mustHaveClinic>
+        <PageContainer>
+          <PageHeader>
+            <PageHeaderContent>
+              <PageTitle>Relatórios</PageTitle>
+              <PageDescription>
+                Gerencie os relatórios das consultas realizadas
+              </PageDescription>
+            </PageHeaderContent>
+          </PageHeader>
+          <PageContent>
+            <ReportsList reports={[]} />
+          </PageContent>
+        </PageContainer>
+      </WithAuthentication>
+    );
+  }
 
-  // Buscar agendamentos dos pacientes vinculados
-  const appointments = await db.query.appointmentsTable.findMany({
-    where: inArray(appointmentsTable.patientId, patientIds),
-    with: {
-      patient: true,
-    },
-  });
-
-  // Buscar relatórios já existentes
-  const reports = await db.query.patientReportsTable.findMany({
-    where: eq(patientReportsTable.professionalId, session!.user.id),
-  });
-
-  // Montar dados para a tabela
-  const data = appointments.map((appointment) => {
-    const report = reports.find((r) => r.appointmentId === appointment.id);
-    return {
-      id: appointment.id,
-      patient: appointment.patient,
-      appointment,
-      title: report?.title || "",
-      actions: (
-        <AddPatientReportForm
-          patientId={appointment.patientId}
-          professionalId={session!.user.id}
-          appointmentId={appointment.id}
-          isOpen={false} // Troque para controle de modal se quiser
-        />
-      ),
-    };
-  });
+  // Buscar relatórios do profissional logado diretamente
+  const reports = await db.query.patientReportsTable
+    .findMany({
+      where: eq(patientReportsTable.professionalId, session.user.id),
+      with: {
+        appointment: {
+          with: {
+            patient: true,
+          },
+        },
+      },
+    })
+    .catch(() => {
+      // Se der erro na query (por causa da estrutura antiga), retornar array vazio
+      return [];
+    });
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Relatórios de Consultas</h1>
-      <DataTable columns={columns} data={data} />
-    </div>
+    <WithAuthentication mustHaveClinic>
+      <PageContainer>
+        <PageHeader>
+          <PageHeaderContent>
+            <PageTitle>Relatórios de Consultas</PageTitle>
+            <PageDescription>
+              Gerencie os relatórios das suas consultas realizadas
+            </PageDescription>
+          </PageHeaderContent>
+          <PageActions>
+            <AddReportButton />
+          </PageActions>
+        </PageHeader>
+        <PageContent>
+          <ReportsList reports={reports} />
+        </PageContent>
+      </PageContainer>
+    </WithAuthentication>
   );
 }

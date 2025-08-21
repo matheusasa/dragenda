@@ -14,10 +14,14 @@ const AddUserButton = ({ clinicId }: { clinicId: string }) => {
       <DialogTrigger asChild>
         <Button>
           <Plus />
-          Adicionar usuario
+          Adicionar usuário
         </Button>
-      </DialogTrigger>
-      <UpsertUserForm onSuccess={() => setIsOpen(false)} clinicId={clinicId} />
+      </DialogTrigger>{" "}
+      <UpsertUserForm
+        onSuccess={() => setIsOpen(false)}
+        clinicId={clinicId}
+        isOpen={isOpen}
+      />
     </Dialog>
   );
 };

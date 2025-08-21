@@ -18,7 +18,11 @@ const AddDoctorButton = () => {
           Adicionar médico
         </Button>
       </DialogTrigger>
-      <UpsertDoctorForm onSuccess={() => setIsOpen(false)} isOpen={isOpen} />
+      <UpsertDoctorForm
+        onSuccess={() => setIsOpen(false)}
+        isOpen={isOpen}
+        // novo perfil, userId e clinicId serão obtidos no servidor React
+      />
     </Dialog>
   );
 };

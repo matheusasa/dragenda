@@ -1,13 +1,28 @@
 "use client";
-import { useForm } from "react-hook-form";
+
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useAction } from "next-safe-action/hooks";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { toast } from "sonner";
+import { z } from "zod";
+
+import { inviteUser } from "@/actions/iam/invite-user";
+import { updateUser } from "@/actions/iam/update-user";
 import { Button } from "@/components/ui/button";
 import {
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Form,
+  FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormControl,
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -18,105 +33,120 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { toast } from "sonner";
-import { useState } from "react";
-import { z } from "zod";
-import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
-import {
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { usersTables } from "@/db/schema";
 
-interface CreateUserFormProps {
-  user?: Partial<z.infer<typeof createUserSchema>>;
-  clinics?: { id: string; name: string }[];
-  onSuccess?: () => void;
-  isOpen?: boolean;
-  onOpenChange?: (open: boolean) => void;
-}
-
-const createUserSchema = z.object({
-  name: z.string().min(1, "Nome obrigatório"),
+// Schemas para criação e edição
+const inviteUserSchema = z.object({
   email: z.string().email("Email inválido"),
-  password: z.string().min(6, "Senha deve ter pelo menos 6 caracteres"),
-  clinicId: z.string().uuid(),
   role: z.enum(["admin", "recepcao", "psicologo"]),
 });
 
+const updateUserSchema = z.object({
+  id: z.string().uuid(),
+  name: z.string().min(1, "Nome é obrigatório"),
+  email: z.string().email("Email inválido"),
+});
+
+type UserForEdit = typeof usersTables.$inferSelect & {
+  role: "admin" | "recepcao" | "psicologo";
+  clinicId: string;
+};
+
+interface UpsertUserFormProps {
+  user?: UserForEdit;
+  clinicId: string;
+  onSuccess?: () => void;
+  isOpen: boolean;
+}
+
 export default function UpsertUserForm({
   user,
-  isOpen = false,
-  onSuccess,
   clinicId,
-}: CreateUserFormProps & { clinicId: string }) {
-  const form = useForm<z.infer<typeof createUserSchema>>({
-    resolver: zodResolver(createUserSchema),
-    defaultValues: {
-      name: user?.name ?? "",
-      email: user?.email ?? "",
-      password: "",
-      role: user?.role ?? "recepcao",
-      clinicId: clinicId,
+  onSuccess,
+  isOpen,
+}: UpsertUserFormProps) {
+  const isEditing = !!user;
+
+  // Schema dinâmico baseado no modo
+  const formSchema = isEditing ? updateUserSchema : inviteUserSchema;
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    shouldUnregister: true,
+    resolver: zodResolver(formSchema),
+    defaultValues: isEditing
+      ? {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        }
+      : {
+          email: "",
+          role: "recepcao",
+        },
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      if (isEditing) {
+        form.reset({
+          id: user.id,
+          name: user.name,
+          email: user.email,
+        });
+      } else {
+        form.reset({
+          email: "",
+          role: "recepcao",
+        });
+      }
+    }
+  }, [isOpen, form, user, isEditing]);
+
+  const inviteUserAction = useAction(inviteUser, {
+    onSuccess: () => {
+      toast.success("Usuário adicionado à clínica com sucesso.");
+      onSuccess?.();
+    },
+    onError: (error) => {
+      toast.error(error.error.serverError || "Erro ao adicionar usuário.");
     },
   });
-  const [loading, setLoading] = useState(false);
-  const router = useRouter();
 
-  async function onSubmitRegister(values: z.infer<typeof createUserSchema>) {
-    setLoading(true);
-    try {
-      if (user && (user as any).id) {
-        // Atualizar usuário existente (implemente a action de update se necessário)
-        toast.success("Usuário atualizado com sucesso!");
-      } else {
-        await authClient.signUp.email(
-          {
-            email: values.email,
-            password: values.password,
-            name: values.name,
-          },
-          {
-            onSuccess: () => {
-              router.push("/dashboard");
-            },
-            onError: (ctx) => {
-              if (ctx.error.code === "USER_ALREADY_EXISTS") {
-                toast.error("Email já cadastrado.");
-              }
-            },
-          }
-        );
-      }
-      form.reset();
+  const updateUserAction = useAction(updateUser, {
+    onSuccess: () => {
+      toast.success("Usuário atualizado com sucesso.");
       onSuccess?.();
-    } catch (e) {
-      toast.error("Erro ao salvar usuário");
-    } finally {
-      setLoading(false);
+    },
+    onError: (error) => {
+      toast.error(error.error.serverError || "Erro ao atualizar usuário.");
+    },
+  });
+
+  const onSubmit = (values: any) => {
+    if (isEditing) {
+      updateUserAction.execute(values);
+    } else {
+      inviteUserAction.execute(values);
     }
-  }
+  };
+
+  const isPending = inviteUserAction.isPending || updateUserAction.isPending;
 
   return (
-    <Dialog open={isOpen}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{user ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
-          <DialogDescription>
-            {user
-              ? "Edite as informações do usuário."
-              : "Preencha os dados para criar um novo usuário."}
-          </DialogDescription>
-        </DialogHeader>
-        <Form {...form}>
-          <form
-            onSubmit={form.handleSubmit(onSubmitRegister)}
-            className="space-y-4"
-          >
+    <DialogContent>
+      <DialogHeader>
+        <DialogTitle>
+          {isEditing ? "Editar Usuário" : "Adicionar Usuário"}
+        </DialogTitle>
+        <DialogDescription>
+          {isEditing
+            ? "Edite as informações do usuário."
+            : "Digite o email de um usuário já cadastrado no sistema para adicioná-lo à clínica."}
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {isEditing && (
             <FormField
               control={form.control}
               name="name"
@@ -124,38 +154,37 @@ export default function UpsertUserForm({
                 <FormItem>
                   <FormLabel>Nome</FormLabel>
                   <FormControl>
-                    <Input {...field} />
+                    <Input placeholder="Nome completo" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Senha</FormLabel>
-                  <FormControl>
-                    <Input type="password" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          )}
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="usuario@exemplo.com"
+                    disabled={isEditing}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+                {!isEditing && (
+                  <p className="text-xs text-muted-foreground">
+                    O usuário deve estar cadastrado no sistema
+                  </p>
+                )}
+              </FormItem>
+            )}
+          />
+          {!isEditing && (
             <FormField
               control={form.control}
               name="role"
@@ -172,7 +201,7 @@ export default function UpsertUserForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="admin">Admin</SelectItem>
+                      <SelectItem value="admin">Administrador</SelectItem>
                       <SelectItem value="recepcao">Recepção</SelectItem>
                       <SelectItem value="psicologo">Psicólogo</SelectItem>
                     </SelectContent>
@@ -181,20 +210,18 @@ export default function UpsertUserForm({
                 </FormItem>
               )}
             />
-            {/* Remover campo de seleção de clínica, pois clinicId vem da sessão */}
-            <input type="hidden" {...form.register("clinicId")} />
-            <Button type="submit" disabled={loading} className="w-full">
-              {loading
-                ? user
-                  ? "Salvando..."
-                  : "Criando..."
-                : user
+          )}
+          <DialogFooter>
+            <Button type="submit" disabled={isPending} className="w-full">
+              {isPending
+                ? "Salvando..."
+                : isEditing
                 ? "Salvar"
-                : "Criar Usuário"}
+                : "Adicionar à clínica"}
             </Button>
-          </form>
-        </Form>
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+        </form>
+      </Form>
+    </DialogContent>
   );
 }

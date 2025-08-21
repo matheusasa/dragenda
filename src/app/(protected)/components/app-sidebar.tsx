@@ -33,28 +33,47 @@ import {
 } from "@/components/ui/sidebar";
 import { authClient } from "@/lib/auth-client";
 
-const items = [
-  {
-    title: "Dashboard",
-    url: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Agendamentos",
-    url: "/appointments",
-    icon: CalendarDays,
-  },
-  {
-    title: "Médicos",
-    url: "/doctors",
-    icon: Stethoscope,
-  },
-  {
-    title: "Pacientes",
-    url: "/patients",
-    icon: UsersRound,
-  },
-];
+function getSidebarItems(session: any) {
+  const items = [
+    {
+      title: "Dashboard",
+      url: "/dashboard",
+      icon: LayoutDashboard,
+    },
+    {
+      title: "Agendamentos",
+      url: "/appointments",
+      icon: CalendarDays,
+    },
+    {
+      title: "Psicólogos",
+      url: "/doctors",
+      icon: Stethoscope,
+    },
+    {
+      title: "Pacientes",
+      url: "/patients",
+      icon: UsersRound,
+    },
+  ];
+  // IAM só para admin
+  if (session?.data?.user?.role === "admin") {
+    items.push({
+      title: "IAM",
+      url: "/iam",
+      icon: Gem,
+    });
+  }
+  // Reports para admin e psicólogo
+  if (["admin", "psicologo"].includes(session?.data?.user?.role)) {
+    items.push({
+      title: "Relatórios",
+      url: "/reports",
+      icon: Gem,
+    });
+  }
+  return items;
+}
 
 export function AppSidebar() {
   const router = useRouter();
@@ -70,6 +89,7 @@ export function AppSidebar() {
       },
     });
   };
+  const sidebarItems = getSidebarItems(session);
   return (
     <Sidebar>
       <SidebarHeader className="border-b p-4">
@@ -80,7 +100,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {sidebarItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={pathname === item.url}>
                     <Link href={item.url}>

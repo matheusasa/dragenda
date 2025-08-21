@@ -1,4 +1,7 @@
-import WithAuthentication from "@/hocs/with-authentication";
+import { eq, inArray } from "drizzle-orm";
+import { headers } from "next/headers";
+
+import { DataTable } from "@/components/ui/data-table";
 import {
   PageActions,
   PageContainer,
@@ -8,24 +11,51 @@ import {
   PageHeaderContent,
   PageTitle,
 } from "@/components/ui/page-container";
-import AddUserButton from "./_components/add-user-button";
-import { inArray } from "drizzle-orm";
-
-import { auth } from "@/lib/auth";
-import { headers } from "next/headers";
 import { db } from "@/db";
-import { eq } from "drizzle-orm";
 import { usersTables, usersToClinicsTable } from "@/db/schema";
-import UserCard from "./_components/UserCard";
+import WithAuthentication from "@/hocs/with-authentication";
+import { auth } from "@/lib/auth";
+
+import AddUserButton from "./_components/add-user-button";
+import { iamTableColumns } from "./_components/table-columns";
+
+type UserWithRole = typeof usersTables.$inferSelect & {
+  role: "admin" | "recepcao" | "psicologo";
+  clinicId: string;
+};
 
 export default async function IAMPage() {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
 
+  // Se não há sessão ou clínica, retornar componente vazio (o WithAuthentication vai redirecionar)
+  if (!session?.user?.clinic?.id) {
+    return (
+      <WithAuthentication mustHaveClinic>
+        <PageContainer>
+          <PageHeader>
+            <PageHeaderContent>
+              <PageTitle>Gerenciar Usuários</PageTitle>
+              <PageDescription>
+                Gerencie os usuários e permissões da sua clínica
+              </PageDescription>
+            </PageHeaderContent>
+          </PageHeader>
+          <PageContent>
+            <DataTable<UserWithRole, unknown>
+              data={[]}
+              columns={iamTableColumns}
+            />
+          </PageContent>
+        </PageContainer>
+      </WithAuthentication>
+    );
+  }
+
   // Buscar todos os vínculos da clínica
   const links = await db.query.usersToClinicsTable.findMany({
-    where: eq(usersToClinicsTable.clinicId, session!.user.clinic!.id),
+    where: eq(usersToClinicsTable.clinicId, session.user.clinic.id),
   });
 
   // Buscar os usuários correspondentes
@@ -35,35 +65,35 @@ export default async function IAMPage() {
     where: inArray(usersTables.id, userIds),
   });
 
+  // Combinar dados dos usuários com seus papéis
+  const usersWithRoles = users.map((user) => {
+    const link = links.find((l) => l.userId === user.id);
+    return {
+      ...user,
+      role: link?.role || ("recepcao" as const),
+      clinicId: session.user.clinic!.id,
+    };
+  });
+
   return (
-    <WithAuthentication mustHaveClinic mustHavePlan>
+    <WithAuthentication mustHaveClinic>
       <PageContainer>
         <PageHeader>
           <PageHeaderContent>
-            <PageTitle>Médicos</PageTitle>
+            <PageTitle>Gerenciar Usuários</PageTitle>
             <PageDescription>
-              Gerencie os médicos da sua clínica
+              Gerencie os usuários e permissões da sua clínica
             </PageDescription>
           </PageHeaderContent>
           <PageActions>
-            <AddUserButton clinicId={session!.user.clinic!.id} />
+            <AddUserButton clinicId={session.user.clinic.id} />
           </PageActions>
         </PageHeader>
         <PageContent>
-          <div className="grid grid-cols-3 gap-6">
-            {users.map((user) => (
-              <UserCard
-                key={user.id}
-                user={{
-                  id: user.id,
-                  name: user.name,
-                  email: user.email,
-                  role: "Médico", // or fetch actual role if available
-                  clinic: session!.user.clinic!.name, // or another clinic identifier
-                }}
-              />
-            ))}
-          </div>
+          <DataTable<UserWithRole, unknown>
+            data={usersWithRoles}
+            columns={iamTableColumns}
+          />
         </PageContent>
       </PageContainer>
     </WithAuthentication>

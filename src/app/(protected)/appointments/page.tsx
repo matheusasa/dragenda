@@ -12,7 +12,12 @@ import {
   PageTitle,
 } from "@/components/ui/page-container";
 import { db } from "@/db";
-import { appointmentsTable, doctorsTable, patientsTable } from "@/db/schema";
+import {
+  appointmentsTable,
+  doctorsTable,
+  patientsTable,
+  professionalProfilesTable,
+} from "@/db/schema";
 import WithAuthentication from "@/hocs/with-authentication";
 import { auth } from "@/lib/auth";
 
@@ -23,21 +28,30 @@ const AppointmentsPage = async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
-  const [patients, doctors, appointments] = await Promise.all([
+  const [patients, professionals, appointments] = await Promise.all([
     db.query.patientsTable.findMany({
       where: eq(patientsTable.clinicId, session!.user.clinic!.id),
     }),
-    db.query.doctorsTable.findMany({
-      where: eq(doctorsTable.clinicId, session!.user.clinic!.id),
+    db.query.usersToClinicsTable.findMany({
+      where: (row, { eq, or }) =>
+        eq(row.clinicId, session!.user.clinic!.id) &&
+        or(eq(row.role, "psicologo"), eq(row.role, "admin")),
+      with: {
+        user: true,
+      },
     }),
     db.query.appointmentsTable.findMany({
       where: eq(appointmentsTable.clinicId, session!.user.clinic!.id),
       with: {
         patient: true,
-        doctor: true,
+        professional: true,
       },
     }),
   ]);
+  // Buscar perfis profissionais para preencher disponibilidade e preço
+  const profiles = await db.query.professionalProfilesTable.findMany({
+    where: eq(professionalProfilesTable.clinicId, session!.user.clinic!.id),
+  });
 
   return (
     <WithAuthentication mustHaveClinic>
@@ -50,7 +64,21 @@ const AppointmentsPage = async () => {
             </PageDescription>
           </PageHeaderContent>
           <PageActions>
-            <AddAppointmentButton patients={patients} doctors={doctors} />
+            <AddAppointmentButton
+              patients={patients}
+              doctors={professionals.map(({ user, role }) => {
+                const prof = profiles.find((pr) => pr.userId === user.id);
+                return {
+                  id: user.id,
+                  name: user.name,
+                  availableFromWeekDay: prof?.availableFromWeekDay ?? 0,
+                  availableToWeekDay: prof?.availableToWeekDay ?? 6,
+                  availableFromTime: prof?.availableFromTime ?? "",
+                  availableToTime: prof?.availableToTime ?? "",
+                  appointmentPriceInCents: prof?.appointmentPriceInCents ?? 0,
+                };
+              })}
+            />
           </PageActions>
         </PageHeader>
         <PageContent>

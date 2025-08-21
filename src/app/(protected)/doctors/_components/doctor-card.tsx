@@ -33,17 +33,18 @@ import {
 } from "@/components/ui/card";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { doctorsTable } from "@/db/schema";
+import { usersTables, professionalProfilesTable } from "@/db/schema";
 import { formatCurrencyInCents } from "@/helpers/currency";
 
 import { getAvailability } from "../_helpers/availability";
 import UpsertDoctorForm from "./upsert-doctor-form";
 
 interface DoctorCardProps {
-  doctor: typeof doctorsTable.$inferSelect;
+  user: typeof usersTables.$inferSelect;
+  professionalProfile: typeof professionalProfilesTable.$inferSelect | null;
 }
 
-const DoctorCard = ({ doctor }: DoctorCardProps) => {
+const DoctorCard = ({ user, professionalProfile }: DoctorCardProps) => {
   const [isUpsertDoctorDialogOpen, setIsUpsertDoctorDialogOpen] =
     useState(false);
   const deleteDoctorAction = useAction(deleteDoctor, {
@@ -55,15 +56,14 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
     },
   });
   const handleDeleteDoctorClick = () => {
-    if (!doctor) return;
-    deleteDoctorAction.execute({ id: doctor.id });
+    if (!user) return;
+    deleteDoctorAction.execute({ id: user.id });
   };
 
-  const doctorInitials = doctor.name
+  const doctorInitials = user.name
     .split(" ")
     .map((name) => name[0])
     .join("");
-  const availability = getAvailability(doctor);
 
   return (
     <Card>
@@ -73,26 +73,37 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
             <AvatarFallback>{doctorInitials}</AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="text-sm font-medium">{doctor.name}</h3>
-            <p className="text-muted-foreground text-sm">{doctor.specialty}</p>
+            <h3 className="text-sm font-medium">{user.name}</h3>
+            <p className="text-muted-foreground text-sm">
+              {professionalProfile?.specialty || "-"}
+            </p>
           </div>
         </div>
       </CardHeader>
       <Separator />
       <CardContent className="flex flex-col gap-2">
-        <Badge variant="outline">
-          <CalendarIcon className="mr-1" />
-          {availability.from.format("dddd")} a {availability.to.format("dddd")}
-        </Badge>
-        <Badge variant="outline">
-          <ClockIcon className="mr-1" />
-          {availability.from.format("HH:mm")} as{" "}
-          {availability.to.format("HH:mm")}
-        </Badge>
-        <Badge variant="outline">
-          <DollarSignIcon className="mr-1" />
-          {formatCurrencyInCents(doctor.appointmentPriceInCents)}
-        </Badge>
+        {professionalProfile && (
+          <>
+            <Badge variant="outline">
+              <CalendarIcon className="mr-1" />
+              {professionalProfile.availableFromWeekDay ?? "-"} a{" "}
+              {professionalProfile.availableToWeekDay ?? "-"}
+            </Badge>
+            <Badge variant="outline">
+              <ClockIcon className="mr-1" />
+              {professionalProfile.availableFromTime ?? "-"} as{" "}
+              {professionalProfile.availableToTime ?? "-"}
+            </Badge>
+            <Badge variant="outline">
+              <DollarSignIcon className="mr-1" />
+              {professionalProfile.appointmentPriceInCents
+                ? `R$ ${(
+                    professionalProfile.appointmentPriceInCents / 100
+                  ).toFixed(2)}`
+                : "-"}
+            </Badge>
+          </>
+        )}
       </CardContent>
       <Separator />
       <CardFooter className="flex flex-col gap-2">
@@ -104,11 +115,8 @@ const DoctorCard = ({ doctor }: DoctorCardProps) => {
             <Button className="w-full">Ver detalhes</Button>
           </DialogTrigger>
           <UpsertDoctorForm
-            doctor={{
-              ...doctor,
-              availableFromTime: availability.from.format("HH:mm:ss"),
-              availableToTime: availability.to.format("HH:mm:ss"),
-            }}
+            userId={user.id}
+            profile={professionalProfile}
             onSuccess={() => setIsUpsertDoctorDialogOpen(false)}
             isOpen={isUpsertDoctorDialogOpen}
           />

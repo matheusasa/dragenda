@@ -38,8 +38,8 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         and(
           eq(appointmentsTable.clinicId, session.user.clinic.id),
           gte(appointmentsTable.date, new Date(from)),
-          lte(appointmentsTable.date, new Date(to)),
-        ),
+          lte(appointmentsTable.date, new Date(to))
+        )
       ),
     db
       .select({
@@ -50,8 +50,8 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         and(
           eq(appointmentsTable.clinicId, session.user.clinic.id),
           gte(appointmentsTable.date, new Date(from)),
-          lte(appointmentsTable.date, new Date(to)),
-        ),
+          lte(appointmentsTable.date, new Date(to))
+        )
       ),
     db
       .select({
@@ -77,10 +77,10 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       .leftJoin(
         appointmentsTable,
         and(
-          eq(appointmentsTable.doctorId, doctorsTable.id),
+          eq(appointmentsTable.professionalId, doctorsTable.userId),
           gte(appointmentsTable.date, new Date(from)),
-          lte(appointmentsTable.date, new Date(to)),
-        ),
+          lte(appointmentsTable.date, new Date(to))
+        )
       )
       .where(eq(doctorsTable.clinicId, session.user.clinic.id))
       .groupBy(doctorsTable.id)
@@ -92,13 +92,16 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         appointments: count(appointmentsTable.id),
       })
       .from(appointmentsTable)
-      .innerJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
+      .innerJoin(
+        doctorsTable,
+        eq(appointmentsTable.professionalId, doctorsTable.userId)
+      )
       .where(
         and(
           eq(appointmentsTable.clinicId, session.user.clinic.id),
           gte(appointmentsTable.date, new Date(from)),
-          lte(appointmentsTable.date, new Date(to)),
-        ),
+          lte(appointmentsTable.date, new Date(to))
+        )
       )
       .groupBy(doctorsTable.specialty)
       .orderBy(desc(count(appointmentsTable.id))),
@@ -106,11 +109,11 @@ export const getDashboard = async ({ from, to, session }: Params) => {
       where: and(
         eq(appointmentsTable.clinicId, session.user.clinic.id),
         gte(appointmentsTable.date, new Date()),
-        lte(appointmentsTable.date, new Date()),
+        lte(appointmentsTable.date, new Date())
       ),
       with: {
         patient: true,
-        doctor: true,
+        professional: true,
       },
     }),
     db
@@ -119,7 +122,7 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         appointments: count(appointmentsTable.id),
         revenue:
           sql<number>`COALESCE(SUM(${appointmentsTable.appointmentPriceInCents}), 0)`.as(
-            "revenue",
+            "revenue"
           ),
       })
       .from(appointmentsTable)
@@ -127,8 +130,8 @@ export const getDashboard = async ({ from, to, session }: Params) => {
         and(
           eq(appointmentsTable.clinicId, session.user.clinic.id),
           gte(appointmentsTable.date, chartStartDate),
-          lte(appointmentsTable.date, chartEndDate),
-        ),
+          lte(appointmentsTable.date, chartEndDate)
+        )
       )
       .groupBy(sql`DATE(${appointmentsTable.date})`)
       .orderBy(sql`DATE(${appointmentsTable.date})`),

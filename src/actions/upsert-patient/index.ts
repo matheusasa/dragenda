@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { patientsTable } from "@/db/schema";
-import { protectedWithClinicActionClient } from "@/lib/next-safe-action";
+import { protectedWithClinicActionClient } from "@/lib/next-safe-action.server";
 
 import { upsertPatientSchema } from "./schema";
 

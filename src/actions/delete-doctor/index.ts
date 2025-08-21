@@ -6,13 +6,13 @@ import { z } from "zod";
 
 import { db } from "@/db";
 import { doctorsTable } from "@/db/schema";
-import { protectedWithClinicActionClient } from "@/lib/next-safe-action";
+import { protectedWithClinicActionClient } from "@/lib/next-safe-action.server";
 
 export const deleteDoctor = protectedWithClinicActionClient
   .schema(
     z.object({
       id: z.string().uuid(),
-    }),
+    })
   )
   .action(async ({ parsedInput, ctx }) => {
     const doctor = await db.query.doctorsTable.findFirst({

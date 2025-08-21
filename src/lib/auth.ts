@@ -13,21 +13,47 @@ export const auth = betterAuth({
   }),
   plugins: [
     customSession(async ({ user, session }) => {
-      const clinics = await db.query.usersToClinicsTable.findMany({
-        where: eq(schema.usersToClinicsTable.userId, user.id),
-        with: { clinic: true },
-      });
-      const clinic = clinics[0];
-      return {
-        user: {
-          ...user,
-          role: clinic?.role,
-          clinic: clinic.clinicId
-            ? { id: clinic?.clinicId, name: clinic.clinic.name }
-            : undefined,
-        },
-        session,
-      };
+      try {
+        // Buscar o vínculo usuário-clínica
+        const userClinicLink = await db.query.usersToClinicsTable.findFirst({
+          where: eq(schema.usersToClinicsTable.userId, user.id),
+        });
+
+        if (!userClinicLink) {
+          return {
+            user: {
+              ...user,
+              role: undefined,
+              clinic: undefined,
+            },
+            session,
+          };
+        }
+
+        // Buscar os dados da clínica separadamente
+        const clinic = await db.query.clinicsTable.findFirst({
+          where: eq(schema.clinicsTable.id, userClinicLink.clinicId),
+        });
+
+        return {
+          user: {
+            ...user,
+            role: userClinicLink.role,
+            clinic: clinic ? { id: clinic.id, name: clinic.name } : undefined,
+          },
+          session,
+        };
+      } catch (error) {
+        console.error("Erro no customSession:", error);
+        return {
+          user: {
+            ...user,
+            role: undefined,
+            clinic: undefined,
+          },
+          session,
+        };
+      }
     }),
   ],
   user: {

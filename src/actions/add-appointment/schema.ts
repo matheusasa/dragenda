@@ -1,10 +1,10 @@
 import { z } from "zod";
 
 export const addAppointmentSchema = z.object({
-  patientId: z.string().uuid({
+  patientId: z.string().min(1, {
     message: "Paciente é obrigatório.",
   }),
-  doctorId: z.string().uuid({
+  doctorId: z.string().min(1, {
     message: "Médico é obrigatório.",
   }),
   date: z.date({

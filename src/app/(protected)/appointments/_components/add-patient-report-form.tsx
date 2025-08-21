@@ -30,7 +30,6 @@ import { useEffect } from "react";
 
 interface AddPatientReportFormProps {
   patientId: string;
-  professionalId: string;
   appointmentId: string;
   isOpen: boolean;
   onSuccess?: () => void;
@@ -38,7 +37,6 @@ interface AddPatientReportFormProps {
 
 export default function AddPatientReportForm({
   patientId,
-  professionalId,
   appointmentId,
   isOpen,
   onSuccess,
@@ -47,7 +45,6 @@ export default function AddPatientReportForm({
     resolver: zodResolver(addPatientReportSchema),
     defaultValues: {
       patientId,
-      professionalId,
       appointmentId,
       title: "",
       content: "",
@@ -67,7 +64,6 @@ export default function AddPatientReportForm({
     if (isOpen) {
       form.reset({
         patientId,
-        professionalId,
         appointmentId,
         title: "",
         content: "",

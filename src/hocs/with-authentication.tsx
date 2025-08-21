@@ -21,7 +21,7 @@ const WithAuthentication = async ({
     headers: await headers(),
   });
   if (!session?.user) {
-    redirect("/authentication");
+    redirect("/auth");
   }
 
   if (mustHaveClinic && !session.user.clinic) {

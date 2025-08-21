@@ -45,12 +45,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { doctorsTable, patientsTable } from "@/db/schema";
+// Tipos simplificados para opções de paciente e médico
+export interface PatientOption {
+  id: string;
+  name: string;
+}
+export interface DoctorOption {
+  id: string;
+  name: string;
+  availableFromWeekDay: number;
+  availableToWeekDay: number;
+  availableFromTime: string;
+  availableToTime: string;
+  appointmentPriceInCents: number;
+}
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  patientId: z.string().uuid({ message: "Paciente é obrigatório." }),
-  doctorId: z.string().uuid({ message: "Médico é obrigatório." }),
+  patientId: z.string().min(1, { message: "Paciente é obrigatório." }),
+  doctorId: z.string().min(1, { message: "Médico é obrigatório." }),
   date: z.date({ message: "Data é obrigatória." }),
   time: z.string().min(1, { message: "Horário é obrigatório." }),
   appointmentPriceInCents: z
@@ -60,8 +73,8 @@ const formSchema = z.object({
 
 interface AddAppointmentFormProps {
   isOpen: boolean;
-  patients: (typeof patientsTable.$inferSelect)[];
-  doctors: (typeof doctorsTable.$inferSelect)[];
+  patients: PatientOption[];
+  doctors: DoctorOption[];
   onSuccess?: () => void;
 }
 
@@ -169,23 +182,20 @@ const AddAppointmentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Paciente</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
+                <FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecione um paciente" />
                     </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {patients.map((patient) => (
-                      <SelectItem key={patient.id} value={patient.id}>
-                        {patient.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <SelectContent>
+                      {patients.map((patient) => (
+                        <SelectItem key={patient.id} value={patient.id}>
+                          {patient.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -197,23 +207,20 @@ const AddAppointmentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Médico</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
+                <FormControl>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecione um médico" />
                     </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {doctors.map((doctor) => (
-                      <SelectItem key={doctor.id} value={doctor.id}>
-                        {doctor.name} - {doctor.specialty}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <SelectContent>
+                      {doctors.map((doctor) => (
+                        <SelectItem key={doctor.id} value={doctor.id}>
+                          {doctor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -293,28 +300,28 @@ const AddAppointmentForm = ({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Horário</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                  disabled={!isDateTimeEnabled || !selectedDate}
-                >
-                  <FormControl>
+                <FormControl>
+                  <Select
+                    onValueChange={field.onChange}
+                    value={field.value}
+                    disabled={!isDateTimeEnabled || !selectedDate}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Selecione um horário" />
                     </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {availableTimes?.data?.map((time) => (
-                      <SelectItem
-                        key={time.value}
-                        value={time.value}
-                        disabled={!time.available}
-                      >
-                        {time.label} {!time.available && "(Indisponível)"}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    <SelectContent>
+                      {availableTimes?.data?.map((time) => (
+                        <SelectItem
+                          key={time.value}
+                          value={time.value}
+                          disabled={!time.available}
+                        >
+                          {time.label} {!time.available && "(Indisponível)"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}

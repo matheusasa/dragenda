@@ -5,13 +5,25 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
-import { doctorsTable, patientsTable } from "@/db/schema";
+// ...existing imports...
 
 import AddAppointmentForm from "./add-appointment-form";
 
+// Use tipo customizado para médicos/profissionais
+// Tipos simplificados para opções de seleção
+export interface PatientOption { id: string; name: string; }
+export interface DoctorOption {
+  id: string;
+  name: string;
+  availableFromWeekDay: number;
+  availableToWeekDay: number;
+  availableFromTime: string;
+  availableToTime: string;
+  appointmentPriceInCents: number;
+}
 interface AddAppointmentButtonProps {
-  patients: (typeof patientsTable.$inferSelect)[];
-  doctors: (typeof doctorsTable.$inferSelect)[];
+  patients: PatientOption[];
+  doctors: DoctorOption[];
 }
 
 const AddAppointmentButton = ({

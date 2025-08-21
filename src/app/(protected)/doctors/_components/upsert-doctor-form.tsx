@@ -1,3 +1,4 @@
+"use client";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAction } from "next-safe-action/hooks";
 import { useEffect } from "react";
@@ -6,7 +7,6 @@ import { NumericFormat } from "react-number-format";
 import { toast } from "sonner";
 import { z } from "zod";
 
-import { upsertDoctor } from "@/actions/upsert-doctor";
 import { Button } from "@/components/ui/button";
 import {
   DialogContent,
@@ -33,15 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { doctorsTable } from "@/db/schema";
+
+import { upsertProfessionalProfileAction } from "@/actions/upsert-professional-profile/action";
 
 import { medicalSpecialties } from "../_constants";
+import type { professionalProfilesTable } from "@/db/schema";
 
 const formSchema = z
   .object({
-    name: z.string().trim().min(1, {
-      message: "Nome é obrigatório.",
-    }),
     specialty: z.string().trim().min(1, {
       message: "Especialidade é obrigatória.",
     }),
@@ -65,17 +64,19 @@ const formSchema = z
       message:
         "O horário de início não pode ser anterior ao horário de término.",
       path: ["availableToTime"],
-    },
+    }
   );
 
 interface UpsertDoctorFormProps {
   isOpen: boolean;
-  doctor?: typeof doctorsTable.$inferSelect;
+  userId?: string;
+  profile?: typeof professionalProfilesTable.$inferSelect | null;
   onSuccess?: () => void;
 }
 
 const UpsertDoctorForm = ({
-  doctor,
+  userId,
+  profile,
   onSuccess,
   isOpen,
 }: UpsertDoctorFormProps) => {
@@ -83,48 +84,47 @@ const UpsertDoctorForm = ({
     shouldUnregister: true,
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: doctor?.name ?? "",
-      specialty: doctor?.specialty ?? "",
-      appointmentPrice: doctor?.appointmentPriceInCents
-        ? doctor.appointmentPriceInCents / 100
+      specialty: profile?.specialty ?? "",
+      appointmentPrice: profile?.appointmentPriceInCents
+        ? profile.appointmentPriceInCents / 100
         : 0,
-      availableFromWeekDay: doctor?.availableFromWeekDay?.toString() ?? "1",
-      availableToWeekDay: doctor?.availableToWeekDay?.toString() ?? "5",
-      availableFromTime: doctor?.availableFromTime ?? "",
-      availableToTime: doctor?.availableToTime ?? "",
+      availableFromWeekDay: profile?.availableFromWeekDay?.toString() ?? "1",
+      availableToWeekDay: profile?.availableToWeekDay?.toString() ?? "5",
+      availableFromTime: profile?.availableFromTime ?? "",
+      availableToTime: profile?.availableToTime ?? "",
     },
   });
 
   useEffect(() => {
     if (isOpen) {
       form.reset({
-        name: doctor?.name ?? "",
-        specialty: doctor?.specialty ?? "",
-        appointmentPrice: doctor?.appointmentPriceInCents
-          ? doctor.appointmentPriceInCents / 100
+        specialty: profile?.specialty ?? "",
+        appointmentPrice: profile?.appointmentPriceInCents
+          ? profile.appointmentPriceInCents / 100
           : 0,
-        availableFromWeekDay: doctor?.availableFromWeekDay?.toString() ?? "1",
-        availableToWeekDay: doctor?.availableToWeekDay?.toString() ?? "5",
-        availableFromTime: doctor?.availableFromTime ?? "",
-        availableToTime: doctor?.availableToTime ?? "",
+        availableFromWeekDay: profile?.availableFromWeekDay?.toString() ?? "1",
+        availableToWeekDay: profile?.availableToWeekDay?.toString() ?? "5",
+        availableFromTime: profile?.availableFromTime ?? "",
+        availableToTime: profile?.availableToTime ?? "",
       });
     }
-  }, [isOpen, form, doctor]);
+  }, [isOpen, form, profile]);
 
-  const upsertDoctorAction = useAction(upsertDoctor, {
+  const upsertProfileAction = useAction(upsertProfessionalProfileAction, {
     onSuccess: () => {
-      toast.success("Médico adicionado com sucesso.");
+      toast.success("Perfil atualizado com sucesso.");
       onSuccess?.();
     },
     onError: () => {
-      toast.error("Erro ao adicionar médico.");
+      toast.error("Erro ao atualizar perfil.");
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    upsertDoctorAction.execute({
+    upsertProfileAction.execute({
       ...values,
-      id: doctor?.id,
+      id: profile?.id,
+      userId,
       availableFromWeekDay: parseInt(values.availableFromWeekDay),
       availableToWeekDay: parseInt(values.availableToWeekDay),
       appointmentPriceInCents: values.appointmentPrice * 100,
@@ -134,28 +134,19 @@ const UpsertDoctorForm = ({
   return (
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>{doctor ? doctor.name : "Adicionar médico"}</DialogTitle>
+        <DialogTitle>
+          {profile
+            ? "Editar informações do profissional"
+            : "Adicionar profissional"}
+        </DialogTitle>
         <DialogDescription>
-          {doctor
-            ? "Edite as informações desse médico."
-            : "Adicione um novo médico."}
+          {profile
+            ? "Atualize os dados deste profissional."
+            : "Preencha os dados para adicionar um novo profissional."}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Nome</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
           <FormField
             control={form.control}
             name="specialty"
@@ -404,12 +395,12 @@ const UpsertDoctorForm = ({
             )}
           />
           <DialogFooter>
-            <Button type="submit" disabled={upsertDoctorAction.isPending}>
-              {upsertDoctorAction.isPending
+            <Button type="submit" disabled={upsertProfileAction.isPending}>
+              {upsertProfileAction.isPending
                 ? "Salvando..."
-                : doctor
-                  ? "Salvar"
-                  : "Adicionar"}
+                : profile
+                ? "Salvar"
+                : "Adicionar"}
             </Button>
           </DialogFooter>
         </form>

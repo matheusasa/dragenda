@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 
 import { db } from "@/db";
 import { appointmentsTable } from "@/db/schema";
-import { protectedWithClinicActionClient } from "@/lib/next-safe-action";
+import { protectedWithClinicActionClient } from "@/lib/next-safe-action.server";
 
 import { getAvailableTimes } from "../get-available-times";
 import { addAppointmentSchema } from "./schema";
@@ -21,7 +21,7 @@ export const addAppointment = protectedWithClinicActionClient
       throw new Error("No available times");
     }
     const isTimeAvailable = availableTimes.data?.some(
-      (time) => time.value === parsedInput.time && time.available,
+      (time) => time.value === parsedInput.time && time.available
     );
     if (!isTimeAvailable) {
       throw new Error("Time not available");
@@ -32,9 +32,11 @@ export const addAppointment = protectedWithClinicActionClient
       .toDate();
 
     await db.insert(appointmentsTable).values({
-      ...parsedInput,
-      clinicId: ctx.user.clinic.id,
+      patientId: parsedInput.patientId,
+      professionalId: parsedInput.doctorId,
+      appointmentPriceInCents: parsedInput.appointmentPriceInCents,
       date: appointmentDateTime,
+      clinicId: ctx.user.clinic.id,
     });
 
     revalidatePath("/appointments");
