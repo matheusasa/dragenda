@@ -76,6 +76,8 @@ export const clinicsTable = pgTable("clinics", {
     .$onUpdate(() => new Date()),
 });
 
+export const roleEnum = pgEnum("role", ["admin", "recepcao", "psicologo"]);
+
 export const usersToClinicsTable = pgTable("users_to_clinics", {
   userId: text("user_id")
     .notNull()
@@ -83,11 +85,56 @@ export const usersToClinicsTable = pgTable("users_to_clinics", {
   clinicId: uuid("clinic_id")
     .notNull()
     .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  role: roleEnum("role").notNull().default("recepcao"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => new Date()),
 });
+
+export const patientProfessionalLinksTable = pgTable(
+  "patient_professional_links",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    patientId: uuid("patient_id")
+      .notNull()
+      .references(() => patientsTable.id, { onDelete: "cascade" }),
+    professionalId: uuid("professional_id")
+      .notNull()
+      .references(() => doctorsTable.id, { onDelete: "cascade" }),
+    startDate: timestamp("start_date").defaultNow().notNull(),
+    endDate: timestamp("end_date"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  }
+);
+
+export const patientReportsTable = pgTable("patient_reports", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  patientId: uuid("patient_id")
+    .notNull()
+    .references(() => patientsTable.id, { onDelete: "cascade" }),
+  professionalId: uuid("professional_id")
+    .notNull()
+    .references(() => doctorsTable.id, { onDelete: "cascade" }),
+  appointmentId: uuid("appointment_id")
+    .notNull()
+    .references(() => appointmentsTable.id, { onDelete: "cascade" }),
+  title: text("title").notNull(),
+  content: text("content").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+export const patientReportsRelations = relations(
+  patientReportsTable,
+  ({ one }) => ({
+    appointment: one(appointmentsTable, {
+      fields: [patientReportsTable.appointmentId],
+      references: [appointmentsTable.id],
+    }),
+  })
+);
 
 export const usersToClinicsTableRelations = relations(
   usersToClinicsTable,

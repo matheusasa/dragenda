@@ -49,21 +49,13 @@ import { doctorsTable, patientsTable } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
-  patientId: z.string().min(1, {
-    message: "Paciente é obrigatório.",
-  }),
-  doctorId: z.string().min(1, {
-    message: "Médico é obrigatório.",
-  }),
-  appointmentPrice: z.number().min(1, {
-    message: "Valor da consulta é obrigatório.",
-  }),
-  date: z.date({
-    message: "Data é obrigatória.",
-  }),
-  time: z.string().min(1, {
-    message: "Horário é obrigatório.",
-  }),
+  patientId: z.string().uuid({ message: "Paciente é obrigatório." }),
+  doctorId: z.string().uuid({ message: "Médico é obrigatório." }),
+  date: z.date({ message: "Data é obrigatória." }),
+  time: z.string().min(1, { message: "Horário é obrigatório." }),
+  appointmentPriceInCents: z
+    .number()
+    .min(1, { message: "Valor da consulta é obrigatório." }),
 });
 
 interface AddAppointmentFormProps {
@@ -85,7 +77,7 @@ const AddAppointmentForm = ({
     defaultValues: {
       patientId: "",
       doctorId: "",
-      appointmentPrice: 0,
+      appointmentPriceInCents: 0,
       date: undefined,
       time: "",
     },
@@ -113,8 +105,8 @@ const AddAppointmentForm = ({
       );
       if (selectedDoctor) {
         form.setValue(
-          "appointmentPrice",
-          selectedDoctor.appointmentPriceInCents / 100
+          "appointmentPriceInCents",
+          selectedDoctor.appointmentPriceInCents
         );
       }
     }
@@ -125,7 +117,7 @@ const AddAppointmentForm = ({
       form.reset({
         patientId: "",
         doctorId: "",
-        appointmentPrice: 0,
+        appointmentPriceInCents: 0,
         date: undefined,
         time: "",
       });
@@ -143,10 +135,7 @@ const AddAppointmentForm = ({
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    createAppointmentAction.execute({
-      ...values,
-      appointmentPriceInCents: values.appointmentPrice * 100,
-    });
+    createAppointmentAction.execute(values);
   };
 
   const isDateAvailable = (date: Date) => {
@@ -232,14 +221,14 @@ const AddAppointmentForm = ({
 
           <FormField
             control={form.control}
-            name="appointmentPrice"
+            name="appointmentPriceInCents"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Valor da consulta</FormLabel>
                 <NumericFormat
-                  value={field.value}
+                  value={field.value / 100}
                   onValueChange={(value) => {
-                    field.onChange(value.floatValue);
+                    field.onChange(Math.round((value.floatValue || 0) * 100));
                   }}
                   decimalScale={2}
                   fixedDecimalScale
