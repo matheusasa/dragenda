@@ -22,8 +22,17 @@ import {
 } from "@/db/schema";
 import { logReportView } from "@/actions/reports/log-report-view";
 import { getReportAuditLogs } from "@/actions/reports/get-audit-logs";
-import { History, Eye, Edit, Plus } from "lucide-react";
+import {
+  History,
+  Eye,
+  Edit,
+  Plus,
+  Paperclip,
+  FileText,
+  Trash2,
+} from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import AttachmentManager from "./attachment-manager";
 
 type ReportWithRelations = typeof patientReportsTable.$inferSelect & {
   appointment: typeof appointmentsTable.$inferSelect & {
@@ -76,6 +85,10 @@ const ViewReportDialog = ({ report, isOpen }: ViewReportDialogProps) => {
         return <Edit className="h-4 w-4 text-blue-600" />;
       case "viewed":
         return <Eye className="h-4 w-4 text-gray-600" />;
+      case "attachment_added":
+        return <Paperclip className="h-4 w-4 text-green-600" />;
+      case "attachment_deleted":
+        return <Trash2 className="h-4 w-4 text-red-600" />;
       default:
         return <History className="h-4 w-4" />;
     }
@@ -89,6 +102,10 @@ const ViewReportDialog = ({ report, isOpen }: ViewReportDialogProps) => {
         return "Editado";
       case "viewed":
         return "Visualizado";
+      case "attachment_added":
+        return "Anexo Adicionado";
+      case "attachment_deleted":
+        return "Anexo Removido";
       default:
         return action;
     }
@@ -107,9 +124,13 @@ const ViewReportDialog = ({ report, isOpen }: ViewReportDialogProps) => {
 
       <Tabs defaultValue="content" className="flex-1 overflow-hidden">
         <TabsList
-          className={`grid w-full ${isAdmin ? "grid-cols-2" : "grid-cols-1"}`}
+          className={`grid w-full ${isAdmin ? "grid-cols-3" : "grid-cols-2"}`}
         >
           <TabsTrigger value="content">Conteúdo</TabsTrigger>
+          <TabsTrigger value="attachments">
+            <Paperclip className="mr-2 h-4 w-4" />
+            Anexos
+          </TabsTrigger>
           {isAdmin && (
             <TabsTrigger value="audit">
               <History className="mr-2 h-4 w-4" />
@@ -179,6 +200,10 @@ const ViewReportDialog = ({ report, isOpen }: ViewReportDialogProps) => {
               />
             </div>
           </div>
+        </TabsContent>
+
+        <TabsContent value="attachments" className="mt-4 overflow-y-auto">
+          <AttachmentManager reportId={report.id} canEdit={true} />
         </TabsContent>
 
         {isAdmin && (
@@ -256,6 +281,33 @@ const ViewReportDialog = ({ report, isOpen }: ViewReportDialogProps) => {
                               )}
                             </div>
                           )}
+
+                          {(log.action === "attachment_added" ||
+                            log.action === "attachment_deleted") &&
+                            log.newContent && (
+                              <div className="text-sm mt-2">
+                                <div
+                                  className={`border-l-4 p-2 rounded ${
+                                    log.action === "attachment_added"
+                                      ? "bg-green-50 border-green-200"
+                                      : "bg-red-50 border-red-200"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <FileText className="h-4 w-4" />
+                                    <span
+                                      className={
+                                        log.action === "attachment_added"
+                                          ? "text-green-700"
+                                          : "text-red-700"
+                                      }
+                                    >
+                                      {log.newContent}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
 
                           <div className="text-xs text-muted-foreground mt-2 space-y-1">
                             <p>IP: {log.ipAddress}</p>

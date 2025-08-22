@@ -2,6 +2,7 @@
 
 import {
   CalendarDays,
+  Clock,
   Gem,
   LayoutDashboard,
   LogOut,
@@ -46,6 +47,11 @@ function getSidebarItems(session: any) {
       icon: CalendarDays,
     },
     {
+      title: "Horários Bloqueados",
+      url: "/blocked-times",
+      icon: Clock,
+    },
+    {
       title: "Psicólogos",
       url: "/doctors",
       icon: Stethoscope,
@@ -84,7 +90,7 @@ export function AppSidebar() {
     await authClient.signOut({
       fetchOptions: {
         onSuccess: () => {
-          router.push("/authentication");
+          router.push("/auth");
         },
       },
     });

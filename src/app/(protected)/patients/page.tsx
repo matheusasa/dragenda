@@ -23,8 +23,33 @@ const PatientsPage = async () => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+
+  // Se não há sessão, o WithAuthentication vai redirecionar
+  if (!session?.user?.clinic?.id) {
+    return (
+      <WithAuthentication mustHaveClinic>
+        <PageContainer>
+          <PageHeader>
+            <PageHeaderContent>
+              <PageTitle>Pacientes</PageTitle>
+              <PageDescription>
+                Gerencie os pacientes da sua clínica
+              </PageDescription>
+            </PageHeaderContent>
+            <PageActions>
+              <AddPatientButton />
+            </PageActions>
+          </PageHeader>
+          <PageContent>
+            <div>Carregando...</div>
+          </PageContent>
+        </PageContainer>
+      </WithAuthentication>
+    );
+  }
+
   const patients = await db.query.patientsTable.findMany({
-    where: eq(patientsTable.clinicId, session!.user.clinic!.id),
+    where: eq(patientsTable.clinicId, session.user.clinic.id),
   });
   return (
     <WithAuthentication mustHaveClinic>

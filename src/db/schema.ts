@@ -141,6 +141,16 @@ export const patientsTable = pgTable("patients", {
   name: text("name").notNull(),
   email: text("email").notNull(),
   phoneNumber: text("phone_number").notNull(),
+  cpf: text("cpf").unique(), // CPF do paciente (opcional para menores)
+  dateOfBirth: timestamp("date_of_birth"), // Data de nascimento
+  // Endereço para NF
+  street: text("street"), // Rua/Logradouro
+  streetNumber: text("street_number"), // Número
+  complement: text("complement"), // Complemento
+  neighborhood: text("neighborhood"), // Bairro
+  city: text("city"), // Cidade
+  state: text("state"), // Estado
+  zipCode: text("zip_code"), // CEP
   createdAt: timestamp("created_at").defaultNow().notNull(),
   sex: patientSexEnum("sex").notNull(),
   updatedAt: timestamp("updated_at")
@@ -205,6 +215,22 @@ export const reportAuditLogsTable = pgTable("report_audit_logs", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// Tabela para anexos de relatórios
+export const reportAttachmentsTable = pgTable("report_attachments", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  reportId: uuid("report_id")
+    .notNull()
+    .references(() => patientReportsTable.id, { onDelete: "cascade" }),
+  fileName: text("file_name").notNull(), // Nome original do arquivo
+  fileSize: integer("file_size").notNull(), // Tamanho em bytes
+  mimeType: text("mime_type").notNull(), // Tipo MIME do arquivo
+  fileUrl: text("file_url").notNull(), // URL onde o arquivo está armazenado
+  uploadedBy: text("uploaded_by")
+    .notNull()
+    .references(() => usersTables.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Definir todas as relations depois
 export const usersTableRelations = relations(usersTables, ({ many, one }) => ({
   usersToClinics: many(usersToClinicsTable),
@@ -265,7 +291,7 @@ export const patientsTableRelations = relations(
 
 export const appointmentsTableRelations = relations(
   appointmentsTable,
-  ({ one }) => ({
+  ({ one, many }) => ({
     clinic: one(clinicsTable, {
       fields: [appointmentsTable.clinicId],
       references: [clinicsTable.id],
@@ -278,6 +304,7 @@ export const appointmentsTableRelations = relations(
       fields: [appointmentsTable.professionalId],
       references: [usersTables.id],
     }),
+    patientReports: many(patientReportsTable),
   })
 );
 
@@ -297,6 +324,7 @@ export const patientReportsRelations = relations(
       references: [patientsTable.id],
     }),
     auditLogs: many(reportAuditLogsTable),
+    attachments: many(reportAttachmentsTable),
   })
 );
 
@@ -310,6 +338,56 @@ export const reportAuditLogsRelations = relations(
     user: one(usersTables, {
       fields: [reportAuditLogsTable.userId],
       references: [usersTables.id],
+    }),
+  })
+);
+
+export const reportAttachmentsRelations = relations(
+  reportAttachmentsTable,
+  ({ one }) => ({
+    report: one(patientReportsTable, {
+      fields: [reportAttachmentsTable.reportId],
+      references: [patientReportsTable.id],
+    }),
+    uploadedByUser: one(usersTables, {
+      fields: [reportAttachmentsTable.uploadedBy],
+      references: [usersTables.id],
+    }),
+  })
+);
+
+// Tabela para horários bloqueados
+export const blockedTimesTable = pgTable("blocked_times", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  professionalId: text("professional_id")
+    .notNull()
+    .references(() => usersTables.id, { onDelete: "cascade" }),
+  clinicId: uuid("clinic_id")
+    .notNull()
+    .references(() => clinicsTable.id, { onDelete: "cascade" }),
+  date: timestamp("date").notNull(), // Data específica do bloqueio
+  timeFrom: time("time_from").notNull(), // Horário de início
+  timeTo: time("time_to").notNull(), // Horário de fim
+  reason: text("reason"), // Motivo do bloqueio (opcional)
+  isRecurring: boolean("is_recurring").default(false), // Se é recorrente
+  recurringDays: text("recurring_days"), // JSON com dias da semana para recorrência
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// Relações da tabela blocked_times
+export const blockedTimesTableRelations = relations(
+  blockedTimesTable,
+  ({ one }) => ({
+    professional: one(usersTables, {
+      fields: [blockedTimesTable.professionalId],
+      references: [usersTables.id],
+    }),
+    clinic: one(clinicsTable, {
+      fields: [blockedTimesTable.clinicId],
+      references: [clinicsTable.id],
     }),
   })
 );

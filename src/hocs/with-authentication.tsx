@@ -12,16 +12,24 @@ const WithAuthentication = async ({
   children,
   mustHavePlan = false,
   mustHaveClinic = false,
+  allowWithoutRole = false,
 }: {
   children: React.ReactNode;
   mustHavePlan?: boolean;
   mustHaveClinic?: boolean;
+  allowWithoutRole?: boolean;
 }) => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
   if (!session?.user) {
     redirect("/auth");
+  }
+
+  // Verificar se o usuário tem uma role atribuída
+  // Se não tiver role e não está na página de waiting-approval, redirecionar
+  if (!allowWithoutRole && !session.user.role) {
+    redirect("/waiting-approval");
   }
 
   if (mustHaveClinic && !session.user.clinic) {

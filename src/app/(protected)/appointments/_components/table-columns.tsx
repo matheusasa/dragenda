@@ -21,6 +21,12 @@ type AppointmentWithRelations = typeof appointmentsTable.$inferSelect & {
     name: string;
     email: string;
   };
+  patientReports: Array<{
+    id: string;
+    title: string;
+    content: string;
+    createdAt: Date;
+  }>;
 };
 
 export const appointmentsTableColumns: ColumnDef<AppointmentWithRelations>[] = [

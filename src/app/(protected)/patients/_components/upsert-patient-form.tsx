@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { upsertPatient } from "@/actions/upsert-patient";
+import { upsertPatientSchema } from "@/actions/upsert-patient/schema";
 import { Button } from "@/components/ui/button";
 import {
   DialogContent,
@@ -33,22 +34,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Separator } from "@/components/ui/separator";
 import { patientsTable } from "@/db/schema";
-
-const formSchema = z.object({
-  name: z.string().trim().min(1, {
-    message: "Nome é obrigatório.",
-  }),
-  email: z.string().email({
-    message: "Email inválido.",
-  }),
-  phoneNumber: z.string().trim().min(1, {
-    message: "Número de telefone é obrigatório.",
-  }),
-  sex: z.enum(["male", "female"], {
-    message: "Sexo é obrigatório.",
-  }),
-});
 
 interface UpsertPatientFormProps {
   isOpen: boolean;
@@ -61,20 +48,47 @@ const UpsertPatientForm = ({
   onSuccess,
   isOpen,
 }: UpsertPatientFormProps) => {
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<z.infer<typeof upsertPatientSchema>>({
     shouldUnregister: true,
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(upsertPatientSchema),
     defaultValues: {
       name: patient?.name ?? "",
       email: patient?.email ?? "",
       phoneNumber: patient?.phoneNumber ?? "",
       sex: patient?.sex ?? undefined,
+      cpf: patient?.cpf ?? "",
+      dateOfBirth: patient?.dateOfBirth
+        ? patient.dateOfBirth.toISOString().split("T")[0]
+        : "",
+      street: patient?.street ?? "",
+      streetNumber: patient?.streetNumber ?? "",
+      complement: patient?.complement ?? "",
+      neighborhood: patient?.neighborhood ?? "",
+      city: patient?.city ?? "",
+      state: patient?.state ?? "",
+      zipCode: patient?.zipCode ?? "",
     },
   });
 
   useEffect(() => {
-    if (isOpen) {
-      form.reset(patient);
+    if (isOpen && patient) {
+      form.reset({
+        name: patient.name,
+        email: patient.email,
+        phoneNumber: patient.phoneNumber,
+        sex: patient.sex,
+        cpf: patient.cpf || "",
+        dateOfBirth: patient.dateOfBirth
+          ? patient.dateOfBirth.toISOString().split("T")[0]
+          : "",
+        street: patient.street || "",
+        streetNumber: patient.streetNumber || "",
+        complement: patient.complement || "",
+        neighborhood: patient.neighborhood || "",
+        city: patient.city || "",
+        state: patient.state || "",
+        zipCode: patient.zipCode || "",
+      });
     }
   }, [isOpen, form, patient]);
 
@@ -88,7 +102,7 @@ const UpsertPatientForm = ({
     },
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
+  const onSubmit = (values: z.infer<typeof upsertPatientSchema>) => {
     upsertPatientAction.execute({
       ...values,
       id: patient?.id,
@@ -188,6 +202,173 @@ const UpsertPatientForm = ({
               </FormItem>
             )}
           />
+
+          <Separator className="my-6" />
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">
+              Informações para Nota Fiscal
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="cpf"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CPF</FormLabel>
+                    <FormControl>
+                      <PatternFormat
+                        format="###.###.###-##"
+                        mask="_"
+                        placeholder="000.000.000-00"
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value.value);
+                        }}
+                        customInput={Input}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data de Nascimento</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
+          <Separator className="my-6" />
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-medium">Endereço</h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="street"
+                render={({ field }) => (
+                  <FormItem className="md:col-span-2">
+                    <FormLabel>Logradouro</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Rua, Avenida, etc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="streetNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número</FormLabel>
+                    <FormControl>
+                      <Input placeholder="123" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="complement"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Complemento</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Apt, Bloco, etc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="neighborhood"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Bairro</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome do bairro" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cidade</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Nome da cidade" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Estado</FormLabel>
+                    <FormControl>
+                      <Input placeholder="SP, RJ, etc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="zipCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>CEP</FormLabel>
+                    <FormControl>
+                      <PatternFormat
+                        format="#####-###"
+                        mask="_"
+                        placeholder="00000-000"
+                        value={field.value}
+                        onValueChange={(value) => {
+                          field.onChange(value.value);
+                        }}
+                        customInput={Input}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+          </div>
+
           <DialogFooter>
             <Button
               type="submit"

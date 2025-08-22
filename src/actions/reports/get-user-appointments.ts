@@ -1,8 +1,13 @@
 "use server";
 
-import { eq, and } from "drizzle-orm";
+import { eq, and, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { appointmentsTable, usersToClinicsTable } from "@/db/schema";
+import {
+  appointmentsTable,
+  usersToClinicsTable,
+  patientReportsTable,
+  patientsTable,
+} from "@/db/schema";
 import { protectedWithClinicActionClient } from "@/lib/next-safe-action.server";
 
 export const getUserAppointments = protectedWithClinicActionClient.action(
@@ -23,18 +28,32 @@ export const getUserAppointments = protectedWithClinicActionClient.action(
     }
 
     // Buscar appointments onde o usuário é o profissional responsável
-    const appointments = await db.query.appointmentsTable.findMany({
-      where: eq(appointmentsTable.professionalId, ctx.user.id),
-      with: {
+    // e que ainda não possuem relatórios
+    const appointments = await db
+      .select({
+        id: appointmentsTable.id,
+        date: appointmentsTable.date,
         patient: {
-          columns: {
-            id: true,
-            name: true,
-          },
+          id: patientsTable.id,
+          name: patientsTable.name,
         },
-      },
-      orderBy: (appointments, { desc }) => [desc(appointments.date)],
-    });
+      })
+      .from(appointmentsTable)
+      .innerJoin(
+        patientsTable,
+        eq(appointmentsTable.patientId, patientsTable.id)
+      )
+      .leftJoin(
+        patientReportsTable,
+        eq(appointmentsTable.id, patientReportsTable.appointmentId)
+      )
+      .where(
+        and(
+          eq(appointmentsTable.professionalId, ctx.user.id),
+          isNull(patientReportsTable.appointmentId) // Apenas consultas sem relatórios
+        )
+      )
+      .orderBy(appointmentsTable.date);
 
     // Mapear para o formato esperado pelo frontend
     return appointments.map((appointment) => ({

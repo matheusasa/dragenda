@@ -34,7 +34,7 @@ const AppointmentsChart = ({
   const chartDays = Array.from({ length: 21 }).map((_, i) =>
     dayjs()
       .subtract(10 - i, "days")
-      .format("YYYY-MM-DD"),
+      .format("YYYY-MM-DD")
   );
 
   const chartData = chartDays.map((date) => {
@@ -76,6 +76,15 @@ const AppointmentsChart = ({
               tickLine={false}
               tickMargin={10}
               axisLine={false}
+              tickFormatter={(value) => {
+                // Se value é um número (índice), use o índice para pegar o item correto
+                if (typeof value === "number") {
+                  const item = chartData[value];
+                  return item ? item.date : "";
+                }
+                // Se value já é a data formatada, retorne-a
+                return value;
+              }}
             />
             <YAxis
               yAxisId="left"
@@ -121,7 +130,7 @@ const AppointmentsChart = ({
                   labelFormatter={(label, payload) => {
                     if (payload && payload[0]) {
                       return dayjs(payload[0].payload?.fullDate).format(
-                        "DD/MM/YYYY (dddd)",
+                        "DD/MM/YYYY (dddd)"
                       );
                     }
                     return label;

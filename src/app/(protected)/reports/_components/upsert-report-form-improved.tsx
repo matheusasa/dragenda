@@ -41,7 +41,7 @@ import {
   patientsTable,
 } from "@/db/schema";
 import { addPatientReportSchema } from "@/actions/add-patient-report/schema";
-import { DynamicRichTextEditor } from "./dynamic-rich-text-editor";
+import { DynamicRichTextEditorImproved } from "./dynamic-rich-text-editor-improved";
 import { useUserAppointments } from "./use-user-appointments";
 
 type ReportWithRelations = typeof patientReportsTable.$inferSelect & {
@@ -276,7 +276,7 @@ const UpsertReportForm = ({
               <FormItem>
                 <FormLabel>Conteúdo</FormLabel>
                 <FormControl>
-                  <DynamicRichTextEditor
+                  <DynamicRichTextEditorImproved
                     content={field.value || ""}
                     onChange={field.onChange}
                     placeholder="Digite o conteúdo do relatório aqui..."

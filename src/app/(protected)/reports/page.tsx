@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import { headers } from "next/headers";
 
 import {
@@ -15,6 +15,7 @@ import {
   appointmentsTable,
   patientReportsTable,
   patientsTable,
+  usersTables,
 } from "@/db/schema";
 import WithAuthentication from "@/hocs/with-authentication";
 import { auth } from "@/lib/auth";
@@ -26,7 +27,7 @@ export default async function ReportsPage() {
   const session = await auth.api.getSession({ headers: await headers() });
 
   // Se não há sessão, retornar array vazio (o WithAuthentication vai redirecionar)
-  if (!session?.user?.id) {
+  if (!session?.user?.id || !session?.user?.clinic?.id) {
     return (
       <WithAuthentication mustHaveClinic>
         <PageContainer>
@@ -46,22 +47,52 @@ export default async function ReportsPage() {
     );
   }
 
-  // Buscar relatórios do profissional logado diretamente
-  const reports = await db.query.patientReportsTable
-    .findMany({
-      where: eq(patientReportsTable.professionalId, session.user.id),
-      with: {
-        appointment: {
-          with: {
-            patient: true,
+  const clinicId = session.user.clinic.id;
+
+  // Buscar relatórios baseado no role do usuário
+  let reports;
+
+  if (session.user.role === "admin") {
+    // Admin vê todos os relatórios da clínica
+    // Buscar todos os relatórios e depois filtrar pela clínica através do appointment
+    const allReports = await db.query.patientReportsTable
+      .findMany({
+        with: {
+          appointment: {
+            with: {
+              patient: true,
+            },
           },
         },
-      },
-    })
-    .catch(() => {
-      // Se der erro na query (por causa da estrutura antiga), retornar array vazio
-      return [];
-    });
+        orderBy: (table, { desc }) => [desc(table.createdAt)],
+      })
+      .catch(() => {
+        return [];
+      });
+
+    // Filtrar apenas relatórios da clínica do admin
+    reports = allReports.filter(
+      (report) => report.appointment.clinicId === clinicId
+    );
+  } else {
+    // Psicólogo vê apenas seus próprios relatórios
+    reports = await db.query.patientReportsTable
+      .findMany({
+        where: eq(patientReportsTable.professionalId, session.user.id),
+        with: {
+          appointment: {
+            with: {
+              patient: true,
+            },
+          },
+        },
+        orderBy: (table, { desc }) => [desc(table.createdAt)],
+      })
+      .catch(() => {
+        // Se der erro na query, retornar array vazio
+        return [];
+      });
+  }
 
   return (
     <WithAuthentication mustHaveClinic>

@@ -24,8 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { addPatientReportSchema } from "@/actions/add-patient-report/schema";
 import { addPatientReport } from "@/actions/add-patient-report";
-import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
+import { DynamicRichTextEditorImproved } from "../../reports/_components/dynamic-rich-text-editor-improved";
 import { useEffect } from "react";
 
 interface AddPatientReportFormProps {
@@ -51,15 +50,6 @@ export default function AddPatientReportForm({
     },
   });
 
-  // TipTap Editor
-  const editor = useEditor({
-    extensions: [StarterKit],
-    content: form.getValues("content"),
-    onUpdate: ({ editor }) => {
-      form.setValue("content", editor.getHTML());
-    },
-  });
-
   useEffect(() => {
     if (isOpen) {
       form.reset({
@@ -68,7 +58,6 @@ export default function AddPatientReportForm({
         title: "",
         content: "",
       });
-      editor?.commands.setContent("");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -113,13 +102,15 @@ export default function AddPatientReportForm({
           <FormField
             control={form.control}
             name="content"
-            render={() => (
+            render={({ field }) => (
               <FormItem>
                 <FormLabel>Conteúdo</FormLabel>
                 <FormControl>
-                  <div className="border rounded-md min-h-[150px] p-2">
-                    <EditorContent editor={editor} />
-                  </div>
+                  <DynamicRichTextEditorImproved
+                    content={field.value || ""}
+                    onChange={field.onChange}
+                    placeholder="Digite o conteúdo do relatório aqui..."
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>

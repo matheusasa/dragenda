@@ -39,6 +39,23 @@ import { formatCurrencyInCents } from "@/helpers/currency";
 import { getAvailability } from "../_helpers/availability";
 import UpsertDoctorForm from "./upsert-doctor-form";
 
+// Função para converter número do dia da semana para nome
+const getWeekDayName = (dayNumber: number | null): string => {
+  if (dayNumber === null) return "-";
+
+  const days = [
+    "Domingo", // 0
+    "Segunda", // 1
+    "Terça", // 2
+    "Quarta", // 3
+    "Quinta", // 4
+    "Sexta", // 5
+    "Sábado", // 6
+  ];
+
+  return days[dayNumber] || "-";
+};
+
 interface DoctorCardProps {
   user: typeof usersTables.$inferSelect;
   professionalProfile: typeof professionalProfilesTable.$inferSelect | null;
@@ -86,8 +103,8 @@ const DoctorCard = ({ user, professionalProfile }: DoctorCardProps) => {
           <>
             <Badge variant="outline">
               <CalendarIcon className="mr-1" />
-              {professionalProfile.availableFromWeekDay ?? "-"} a{" "}
-              {professionalProfile.availableToWeekDay ?? "-"}
+              {getWeekDayName(professionalProfile.availableFromWeekDay)} a{" "}
+              {getWeekDayName(professionalProfile.availableToWeekDay)}
             </Badge>
             <Badge variant="outline">
               <ClockIcon className="mr-1" />

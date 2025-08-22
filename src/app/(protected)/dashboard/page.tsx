@@ -22,7 +22,7 @@ import { appointmentsTableColumns } from "../appointments/_components/table-colu
 import AppointmentsChart from "./_components/appointments-chart";
 import { DatePicker } from "./_components/date-picker";
 import StatsCards from "./_components/stats-cards";
-import TopDoctors from "./_components/top-doctors";
+import TopProfessionals from "./_components/top-professionals";
 import TopSpecialties from "./_components/top-specialties";
 
 interface DashboardPageProps {
@@ -36,6 +36,28 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+
+  // Se não há sessão, o WithAuthentication vai redirecionar
+  if (!session?.user?.clinic?.id) {
+    return (
+      <WithAuthentication mustHaveClinic>
+        <PageContainer>
+          <PageHeader>
+            <PageHeaderContent>
+              <PageTitle>Dashboard</PageTitle>
+              <PageDescription>
+                Tenha uma visão geral da sua clínica.
+              </PageDescription>
+            </PageHeaderContent>
+          </PageHeader>
+          <PageContent>
+            <div>Carregando...</div>
+          </PageContent>
+        </PageContainer>
+      </WithAuthentication>
+    );
+  }
+
   const { from, to } = await searchParams;
   if (!from || !to) {
     redirect(
@@ -59,7 +81,7 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
     session: {
       user: {
         clinic: {
-          id: session!.user.clinic!.id,
+          id: session.user.clinic.id,
         },
       },
     },
@@ -90,7 +112,7 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
           />
           <div className="grid grid-cols-[2.25fr_1fr] gap-4">
             <AppointmentsChart dailyAppointmentsData={dailyAppointmentsData} />
-            <TopDoctors doctors={topDoctors} />
+            <TopProfessionals doctors={topDoctors} />
           </div>
           <div className="grid grid-cols-[2.25fr_1fr] gap-4">
             <Card>
@@ -98,7 +120,7 @@ const DashboardPage = async ({ searchParams }: DashboardPageProps) => {
                 <div className="flex items-center gap-3">
                   <Calendar className="text-muted-foreground" />
                   <CardTitle className="text-base">
-                    Agendamentos de hoje
+                    Próximos agendamentos
                   </CardTitle>
                 </div>
               </CardHeader>
